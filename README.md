@@ -11,4 +11,8 @@ Let's talk about the journey:
 
 # The Data: Steam Data Via Kaggle
 
-I am using a 640 MB dataset from Kaggle to do this project.
+I am using a 640 MB dataset from Kaggle to do this project: [Steam Data by Souyama](https://www.kaggle.com/datasets/souyama/steam-dataset).
+
+## The Upload
+
+Hit a few snags with this, as the Python Opensearch library doesn't appear to be fully compatible with Python3. Since Python2 is EOL, switching tactics to Golang. I made a note about the Python library as that might be worth a deeper analysis and (re-)?opening one of their tickets on this issue.
