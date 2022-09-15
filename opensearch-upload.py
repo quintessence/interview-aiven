@@ -2,6 +2,7 @@ from opensearchpy import OpenSearch
 from genericpath import isfile
 import json
 import os
+import time
 
 ## Two types of comments:
 #### FIXME: something is broken; should be addressed and removed.
@@ -70,19 +71,23 @@ for root, dirs, files in os.walk(startpath, topdown=False):
         data = json.load(f)
         name_of_source_file = {"source": name}
         for key,value in data.items():
-         # Combine the two dict type with a formatted string literal
-         # And add the "what to do" with the payload
-         #value_with_source = f'{value} {name_of_source_file}'
-         value_with_source = value | name_of_source_file
-         #print(key, "value is:\n", value_with_source)
-         ## now need to make newline delimited JSON payload
-         #payload = json.dumps(create_or_replace) + "\n" + json.dumps(value_with_source) + "\n"
-         #LEAVE-IN: troubleshooting
-         #print(payload)
-         response = osClient.index(index = index_name, body = json.dumps(value_with_source), refresh = True)
-         #response=osClient.bulk(body=json.loads(payload),index=index_name)
-         print(response)
-         f.close()
+          # Combine the two dict type with a formatted string literal
+          # And add the "what to do" with the payload
+          #value_with_source = f'{value} {name_of_source_file}'
+          value_with_source = value | name_of_source_file
+          #print(key, "value is:\n", value_with_source)
+          ## now need to make newline delimited JSON payload
+          #payload = json.dumps(create_or_replace) + "\n" + json.dumps(value_with_source) + "\n"
+          #LEAVE-IN: troubleshooting
+          #print(payload)
+          try:
+            response = osClient.index(index = index_name, body = json.dumps(value_with_source), refresh = True)
+          except:
+            time.sleep(5)
+            response = osClient.index(index = index_name, body = json.dumps(value_with_source), refresh=True)
+          #response=osClient.bulk(body=json.loads(payload),index=index_name)
+          print(response)
+        f.close()
    #for name in dirs:
       #LEAVE-IN: troubleshooting
       #print(os.path.join(root, name))
