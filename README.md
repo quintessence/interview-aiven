@@ -8,7 +8,7 @@ Let's talk about the journey:
 * v1 - Go on Kaggle and get some NYC Bus Data, load it into Aiven's postgres offering and use Aiven's Grafana offering to build some dashboards. Drawback: this is a no-code solution to a coding exercise, so that won't do!
 * v2 - The Final Version: I still want to write a way to scrape the data I need out of the Zillow API, but it turns out I'll also need a way to bulk load the data into OpenSearch whether the data is Zillow or any other source. This means that I'm focusing on bulk uploadig JSON files into the Aiven platform.
 
-There are three segements to my write up here: the first will be the "public facing post" that I would write about as if it were a blog. The next is what I would be submitting if I were giving internal feedback on the process to a relevant team. And finally I'll have some of my initial thoughts on code in the GitHub repo.
+There are two segements to my write up here: the first will be the "public facing post" that I would write about as if it were a blog. The second is what I would be submitting if I were giving internal feedback on the process to a relevant team.
 
 Some context for the blog post that follows: I try to keep them in about 10 minutes of "reading time" as implementation is always a time consuming process in and of itself, so I don't want the reading portion to be a barrier.
 
@@ -295,11 +295,17 @@ Now that you have your data uploaded into Aiven, you can start to use OpenSearch
 
 ---
 
-## Internal Feedback
+## Internal Feedback on Data Uploading and Trying the Trial
 
+### TLDR: We Should Provide "Low Code" and "No Code" Options
 
+I think that it's great that we offer some pre-populated data - that gives people the ability to start to tinker with OpenSearch and see how to use their free trial independent of generating data. That said, some people might already have data that they can populate for what they specifically want to try to test for - some of it might involve streaming the data in, which we're already set up to do, but some of it might involve a batch upload of their own demo or staging data. This is something we're not currently suited for without someone taking on this particular exercise - writing a data uploader. Specifically getting the data into a format that the bulk endpoint would consume proved to be a bit of a chore. A work around is to iterate and upload each individual document on its own as I did here, which did encounter the workaround-able connection timeout + read timeout issue.
 
-### Feedback - the No Code option
-Separation of Concerns - people who understand the data might not understand the code to get the data into the product to just write an uploader. Having a tool (more flushed out) like this will help.
+Also, depending on the teams invovled with trying and using our product, the individuals tasked with uploading vs analyzing vs generating the data might not be the same teams. This means that the people generating the data in particular might not have a coding backgroung, but an analytics one. Even though the dev and/or ops teams might be able to stream some data into our platform on their behalf, that's not the strongest user experience for them.
 
-The individual upload: fails every 50-100 records (paste full error). That's why there's a try catch. Should never need to sleep in the code; however, my experience with the bulk uploader was that it was even more finnikcy than that, so getting something working was paramount. (All the more reason for the ability to upload the code.)
+We should provide two things:
+
+* A "no code" solution to upload the data: for people who need to make use of and interpret the data that don't have a programming background.
+* A "low code" solution, where broadly applicable and tested demo solutions like this one: for people to utilize in their projects.
+
+I think we should be very active with this in our efforts, sharing in our communities and encouraging any ambassadors or super users to make use of the code samples in what they build that is public facing. We could offer swag and Internet Points for the most interesting combination of code use and idea.
