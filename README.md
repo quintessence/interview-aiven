@@ -48,7 +48,7 @@ Once your service is running, which should only take a few moments, we can start
 
 ## The Code 🐍
 
-To keep a reference of the code, please keep [this repo](handy), which has the code itself and notes. The full code is here:
+To keep a reference of the code, please keep [this repo](README.md), which has the code itself and notes. The full code is here:
 
 ```python
 from opensearchpy import OpenSearch
