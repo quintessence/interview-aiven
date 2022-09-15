@@ -51,7 +51,69 @@ Once your service is running, which should only take a few moments, we can start
 To keep a reference of the code, please keep [this repo](handy), which has the code itself and notes. The full code is here:
 
 ```python
+from opensearchpy import OpenSearch
+from genericpath import isfile
+import json
 import os
+import time
+
+## Notes
+## 1. Connect to OpenSearch
+## 2. Create index
+## 3. ...
+## 4. Profit, lol
+
+host = 'HOST'
+port = 24022
+auth = ('USER', 'PASSWORD') 
+
+osClient = OpenSearch(
+    hosts = [{'host': host, 'port': port}],
+    http_compress = True,
+    http_auth = auth,
+    use_ssl = True,
+    verify_certs = True,
+    ssl_assert_hostname = False,
+    ssl_show_warn = False
+)
+
+index_name = 'steam-data-index'
+index_body = {
+  'settings': {
+    'index': {
+      'number_of_shards': 4
+    }
+  }
+}
+response = osClient.indices.create(index_name, body=index_body)
+print('\nCreating index:')
+print(response)
+
+startpath = 'data/steam_dataset/'
+
+#### Steps in the loops to upload data:
+#### 1. Walk from root and find all directories and files
+#### 2. For JSON files only do:
+####     - append the source file name.extension
+####     - upload record
+####     - rinse, repeat all records in dataset
+####     - rinse, repeat all JSON files in directory tree
+for root, dirs, files in os.walk(startpath, topdown=False):
+   for name in files:
+      ## grabbing only the JSON files
+      if name.endswith("json"):
+        f = open(os.path.join(root,name), 'r')
+        data = json.load(f)
+        name_of_source_file = {"source": name}
+        for key,value in data.items():
+          value_with_source = value | name_of_source_file
+          try:
+            response = osClient.index(index = index_name, body = json.dumps(value_with_source), refresh = True)
+          except:
+            time.sleep(5)
+            response = osClient.index(index = index_name, body = json.dumps(value_with_source), refresh=True)
+          print(response)
+        f.close()
 ```
 
 Let's review what each segment is doing.
@@ -120,12 +182,13 @@ As a reminder, this code needs to be able to grab one or more files from one or 
 ```python
 startpath = 'data/steam_dataset/'
 
-#### Steps in the loops:
+#### Steps in the loops to upload data:
 #### 1. Walk from root and find all directories and files
 #### 2. For JSON files only do:
 ####     - append the source file name.extension
 ####     - upload record
 ####     - rinse, repeat all records in dataset
+####     - rinse, repeat all JSON files in directory tree
 for root, dirs, files in os.walk(startpath, topdown=False):
    for name in files:
       ## grabbing only the JSON files
