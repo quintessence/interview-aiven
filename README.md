@@ -288,9 +288,128 @@ opensearchpy.exceptions.ConnectionTimeout: ConnectionTimeout caused by - ReadTim
 
 Looking at the messages, we can see these are read and connection timeout messages. In practice, they happened every 50-100 records or so, and the sleep statement allows the program to re-connect and try again after pausing for a few seconds.
 
-## What Next?
+## Looking At The Data
 
-Now that you have your data uploaded into Aiven, you can start to use OpenSearch's built in visualization tools to do some initial analysis and surface additional information. You can search the data for how many games are from a particular genre, how many unique records were uploaded, and even what percentage of the data came from any particular source for a start!
+Now that we have the data in the platform, let's take a look at an example record in full:
+
+```
+{
+  "_index": "steam-data-index",
+  "_type": "_doc",
+  "_id": "nofBPYMBRPW5wlYPgXnd",
+  "_version": 1,
+  "_score": 0,
+  "_source": {
+    "appid": 578080,
+    "name": "PUBG: BATTLEGROUNDS",
+    "developer": "KRAFTON, Inc.",
+    "publisher": "KRAFTON, Inc.",
+    "score_rank": "",
+    "positive": 1140088,
+    "negative": 888932,
+    "userscore": 0,
+    "owners": "50,000,000 .. 100,000,000",
+    "average_forever": 22351,
+    "average_2weeks": 808,
+    "median_forever": 7452,
+    "median_2weeks": 167,
+    "price": "0",
+    "initialprice": "0",
+    "discount": "0",
+    "ccu": 363124,
+    "languages": "English, Korean, Simplified Chinese, French, German, Spanish - Spain, Arabic, Japanese, Polish, Portuguese, Russian, Turkish, Thai, Italian, Portuguese - Brazil, Traditional Chinese, Ukrainian",
+    "genre": "Action, Adventure, Free to Play, Massively Multiplayer",
+    "tags": {
+      "Survival": 13969,
+      "Shooter": 11785,
+      "Multiplayer": 10134,
+      "Battle Royale": 9981,
+      "FPS": 7728,
+      "PvP": 7296,
+      "Third-Person Shooter": 6820,
+      "Action": 5668,
+      "Online Co-Op": 5012,
+      "Tactical": 4722,
+      "Co-op": 4010,
+      "First-Person": 3772,
+      "Strategy": 2905,
+      "Early Access": 2715,
+      "Competitive": 2160,
+      "Third Person": 2110,
+      "Team-Based": 1858,
+      "Difficult": 1567,
+      "Simulation": 1213,
+      "Stealth": 1123
+    },
+    "source": "steam_spy_detailed.json"
+  }
+}
+```
+
+Looking at some of the fields we can see some of the properties of this particular game including its name, developer, publisher, some data regarding its rank compared to other games, and so on. We can see that the languages are listed as a comma separated list and the genre tags are listed out. If we wanted to see how many games in the uploaded set were tagged as Survival, we could filter the results to see if the Survival tag exists (the numerical value isn't relevant):
+
+![](images/aiven-survival-games.png)
+
+Of 5427 games uploaded, 828 or ~16% are Survival games.
+
+**What about languages?**
+
+When we looked at a record previously, we could see that languages are a comma separated list paired with the language key like so:
+
+```
+"languages": "English, Korean, Simplified Chinese, French, German, Spanish - Spain, Arabic, Japanese, Polish, Portuguese, Russian, Turkish, Thai, Italian, Portuguese - Brazil, Traditional Chinese, Ukrainian"
+```
+
+In order to filter for English games, I create a filter and set it to `languages.keyword is English` in the UI:
+
+![](images/aiven-filter-english.png)
+
+A drawback to this approach is that the query currently only returns the records where the only value in `languages` is `English`. So if the game is in English and other languages, that's not returned. I can expand the search to include all games that are in English as well as English and other languages by editing the query. I do this by using "Edit as Query DSL" and put `*` for wildcards around `English`:
+
+```
+{
+  "query": {
+    "query_string": {
+      "query": "*English*",
+      "fields": [
+        "languages.keyword"
+      ]
+    }
+  }
+}
+```
+When you save the query the results should refresh, but if not just click Refresh to the right of the search bar. In this case, we now have 5304 records. 
+
+I can also create a chart of the languages, but due to the way the data is structured I can't quite get the answer to the question I'd like to ask. The question I'd like to ask is "what languages are the games in and how many in each language?" As a simplified specific example, if the data set had 5 records in English only, 3 in English and Ukrainian, and 3 in Ukrainian only, what I'd like is a bar chart with 8 records for English and 6 records for Ukranian.
+
+One of the reasons this can't be achieved with this particular set is because `languages` is typed as `keyword` and not `text`. `keyword` data in this case is stored as entire, unparsed / analyzed, string. This means that as far as OpenSearch is concerned, `English`, `English, Ukrainian`, and `Ukrainian` are distinct separate "things". If instead `languages` was `text`, then the field would be analyzed before it was stored and `English` -> `English`, `English, Ukrainian` -> `English`, `Ukrainian`, `Ukrainian` -> `Ukrainian`. For a relevant analysis on Keyword vs Text, please check out [this blog post on Code Curated](https://codecurated.com/blog/elasticsearch-text-vs-keyword/).
+
+That said, let's visualize the data that we have! Go to the hamburger menu and click `Visualize -> Create New Visualizaton -> Pie` and select the `English Games` saved query. At first you should see this:
+
+![](images/aiven-english-games-new.png)
+
+In order to how many games have additional languages, we'll need to create buckets for the aggregated data. Under buckets click `Add -> Split Slices`. Now we can take a look at the Terms in `languages.keyword` like so:
+
+![](images/aiven-english-games-10.png)
+
+Here, the language buckets are organized by count. English only comes in first, followed "English, French, German, Italian, Spanish - Spain", and then the remaining 8 buckets. If we increase the size then the pie graph is split into more pieces. For exmaple if Size is 100 then the first 100 are returned and graphed:
+
+![](images/aiven-english-games-100.png)
+
+In this case we can see much thinner slices for the less frequent language combinations. In each case we can see that while there are 1492 English (only) games, that in the case of 10 buckets that accounds for 72.6% of the records graphed and with 100 buckets it is 54.71% due to how many more records are included.
+
+
+## Signing off, for now ;)
+
+This unfamiliar (to me) data set was a fun one to explore! The data set itself is relatively large and the JSON objects have several fields that we can discuss and analyze. The issues with `keyword` vs `text` also serve as a reminder to keep in mind a few things when designing your data objects:
+
+* What information is trying to be understood with this data?
+* What tool(s) are going to be used to store the data?
+* What tool(s) are going to be used to interpret the data?
+
+You will need to keep all of these in mind so that you can store your data without accidentally creating redundancies or other storage issues and that the data is formatted to match what the tool(s) that will be used to analyze and interpret it are expecting. You also need to be aware of what questions or types of questions will be asked of the data so that those answers are easy to surface and have enough surrounding context to be meaningful.
+
+Keeping all of that in mind I encourage you to create a few more visualizations of the questions you'd like to ask of this data and then put them together on a dashboard that communicates 3-5 features of the games available that you find interesting. And as always, stay tuned to our blog for more snippets and samples!
 
 
 ---
